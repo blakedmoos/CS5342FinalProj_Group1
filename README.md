@@ -93,8 +93,8 @@ The application will be available at: http://localhost:3000
 Open your browser and navigate to http://localhost:3000, then:
 
 1. Click the **"Initialize Database"** button
-2. Wait 2-3 minutes for all 12 PDFs to be processed
-3. You should see: "Database Ready - 12 documents, 49 chunks"
+2. Wait 2-3 minutes for all PDFs to be processed
+3. You should see: "Database Ready - 24 documents, 49 chunks"
 
 Alternatively, initialize via command line:
 
@@ -104,10 +104,10 @@ curl -X POST http://localhost:3000/api/init
 
 ## 📚 Training Data
 
-The system is pre-loaded with 12 network security documents in the `/public` directory:
+The system is pre-loaded with network security documents in the `/public` directory:
 
 - **Homework**: CS4331CS5342 NS Hw 1.pdf
-- **Lecture Slides**: Lecture 1-10_slides.pdf (10 files)
+- **Lecture Slides**: Lecture 1-22_slides.pdf (22 files)
 - **Textbook**: Network Security Essentials Applications and Standards sixth edition.pdf
 
 These documents are automatically processed during database initialization.
@@ -480,7 +480,7 @@ This is the **best option** since the project is designed to be privacy-preservi
 ```bash
 # Clone and setup
 git clone https://github.com/blakedmoos/CS5342FinalProj_Group1
-cd network-security-tutor
+cd CS5342FinalProj_Group1
 pnpm install
 source .venv/bin/activate
 pip install PyPDF2 sentence-transformers
