@@ -1,12 +1,32 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { tutorAgent } from "@/lib/tutor-agent"
+import { sanitizeInput } from "@/lib/sanitize"
 
 export async function POST(request: NextRequest) {
   try {
-    const { question, context, maxResults } = await request.json()
+    const { question: rawQuestion, context, maxResults } = await request.json()
 
-    if (!question || typeof question !== "string") {
-      return NextResponse.json({ error: "Question is required and must be a string" }, { status: 400 })
+    if (!rawQuestion || typeof rawQuestion !== "string") {
+      return NextResponse.json(
+        { error: "Question is required and must be a string" },
+        { status: 400 }
+      )
+    }
+
+  console.log("=== Tutor API: Incoming question ===")
+    console.log("RAW QUESTION:", rawQuestion)
+
+    const question = sanitizeInput(rawQuestion)
+
+    console.log("SANITIZED QUESTION:", question)
+    console.log("TIMESTAMP:", new Date().toISOString())
+    console.log("====================================")
+
+    if (!question || question.length === 0) {
+      return NextResponse.json(
+        { error: "Invalid or empty question after sanitization" },
+        { status: 400 }
+      )
     }
 
     const response = await tutorAgent.answerQuestion({
@@ -18,7 +38,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(response)
   } catch (error) {
     console.error("Error in tutor API:", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    )
   }
 }
 

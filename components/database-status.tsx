@@ -11,12 +11,20 @@ export function DatabaseStatus() {
   const [isInitializing, setIsInitializing] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  // 👇 NEW: track how many PDFs there are
+  const [pdfCount, setPdfCount] = useState<number | null>(null)
+
   const checkStatus = async () => {
     try {
       setStatus("loading")
       const response = await fetch("/api/init")
       const data = await response.json()
-      
+
+      // save pdfCount if backend sent it
+      if (typeof data.pdfCount === "number") {
+        setPdfCount(data.pdfCount)
+      }
+
       if (data.success && data.initialized) {
         setStatus("initialized")
         setStats(data.stats)
@@ -33,10 +41,15 @@ export function DatabaseStatus() {
     try {
       setIsInitializing(true)
       setError(null)
-      
+
       const response = await fetch("/api/init", { method: "POST" })
       const data = await response.json()
-      
+
+      // update pdfCount from POST response too (fallback to existing)
+      if (typeof data.pdfCount === "number") {
+        setPdfCount(data.pdfCount)
+      }
+
       if (data.success) {
         setStatus("initialized")
         setStats(data.stats)
@@ -112,11 +125,7 @@ export function DatabaseStatus() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Button
-            onClick={initializeDatabase}
-            disabled={isInitializing}
-            className="w-full"
-          >
+          <Button onClick={initializeDatabase} disabled={isInitializing} className="w-full">
             {isInitializing ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -131,7 +140,7 @@ export function DatabaseStatus() {
           </Button>
           {isInitializing && (
             <p className="text-xs text-muted-foreground mt-2 text-center">
-              Processing 12 PDF files and generating embeddings...
+              Processing {pdfCount ?? "?"} PDF file{pdfCount === 1 ? "" : "s"} and generating embeddings...
             </p>
           )}
         </CardContent>

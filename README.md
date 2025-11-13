@@ -106,8 +106,8 @@ curl -X POST http://localhost:3000/api/init
 
 The system is pre-loaded with network security documents in the `/public` directory:
 
-- **Homework**: CS4331CS5342 NS Hw 1.pdf
-- **Lecture Slides**: Lecture 1-22_slides.pdf (22 files)
+- **Homework**: CS4331CS5342 NS Hw 1.pdf, Solution_HW2_2025.pdf
+- **Lecture Slides**: Lecture 1-25_slides.pdf (25 files)
 - **Textbook**: Network Security Essentials Applications and Standards sixth edition.pdf
 
 These documents are automatically processed during database initialization.
@@ -445,7 +445,7 @@ private MIN_SIMILARITY_THRESHOLD: number = 0.2;  // From 0.3
 
 ## 📊 Performance
 
-- **Database Initialization**: 2-3 minutes (12 PDFs → 49 chunks)
+- **Database Initialization**: 2-3 minutes (28 PDFs → 74 chunks)
 - **Q&A Response Time**: 5-10 seconds (includes vector search + LLM generation)
 - **Quiz Generation**: 10-30 seconds (depends on number of questions)
 - **Quiz Grading**: 
@@ -560,6 +560,11 @@ This project is for educational purposes as part of the Network Security course.
 ## 👥 Authors
 
 - Amauri Ribeiro
+- Hoang Thinh Pham
+- Blake Moos
+- Sthephany Rojas
+- Ismael Burgos
+- Ynes Ineza
 
 ## 🙏 Acknowledgments
 
@@ -570,6 +575,6 @@ This project is for educational purposes as part of the Network Security course.
 
 ---
 
-**Last Updated**: October 3, 2025  
+**Last Updated**: November 12, 2025  
 **Version**: 1.0.0  
 **Course**: CS4331/CS5342 - Network Security

@@ -18,10 +18,19 @@ export async function POST() {
     const stats = vectorDb.getStats();
     if (stats.totalChunks > 0) {
       console.log(`Vector database already initialized with ${stats.totalChunks} chunks.`);
+      const PUBLIC_DIR = path.join(process.cwd(), "public")
+      let pdfCount = 0
+      try {
+        const files = fs.readdirSync(PUBLIC_DIR)
+        pdfCount = files.filter((f) => f.endsWith(".pdf")).length
+      } catch (e) {
+        console.error("Error reading public directory for pdf count:", e)
+      }
       return NextResponse.json({
         success: true,
         message: 'Vector database already initialized',
-        stats
+        stats,
+        pdfCount,
       });
     }
     
@@ -69,7 +78,8 @@ export async function POST() {
       message: 'Vector database initialized successfully',
       stats: finalStats,
       processed: processedCount,
-      failed: failedCount
+      failed: failedCount,
+      pdfCount: pdfFiles.length,
     });
     
   } catch (error) {
@@ -89,10 +99,20 @@ export async function GET() {
     const vectorDb = await getVectorDatabaseInstance();
     const stats = vectorDb.getStats();
     
+    const PUBLIC_DIR = path.join(process.cwd(), "public")
+    let pdfCount = 0
+    try {
+      const files = fs.readdirSync(PUBLIC_DIR)
+      pdfCount = files.filter((f) => f.endsWith(".pdf")).length
+    } catch (e) {
+      console.error("Error reading public directory for pdf count:", e)
+    }
+
     return NextResponse.json({
       success: true,
       initialized: stats.totalChunks > 0,
-      stats
+      stats,
+      pdfCount,
     });
   } catch (error) {
     console.error('Error getting vector database status:', error);

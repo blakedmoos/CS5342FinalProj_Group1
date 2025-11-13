@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { queryVectorDatabase } from "@/lib/vector-database";
 import { generateQuiz } from "@/lib/quiz-agent";
+import { sanitizeInput } from "@/lib/sanitize"
 
 export async function POST(request: NextRequest) {
   try {
@@ -8,7 +9,9 @@ export async function POST(request: NextRequest) {
 
     switch (action) {
       case "generate":
-        const { topic, count } = data;
+        const { topic, count } = data
+        const cleanTopic =
+        typeof topic === "string" ? sanitizeInput(topic) : topic
         
         // Get real document chunks from vector database
         const { getVectorDatabaseInstance } = await import('@/lib/vector-database-instance');
@@ -19,9 +22,9 @@ export async function POST(request: NextRequest) {
         const allChunks = vectorDb.getAllChunks();
         console.log(`Total chunks in database: ${allChunks.length}`);
         
-        if (topic && topic !== 'all') {
-          chunks = vectorDb.getChunksByTopic(topic);
-          console.log(`Found ${chunks.length} chunks for topic: "${topic}"`);
+        if (cleanTopic && cleanTopic !== "all") {
+          chunks = vectorDb.getChunksByTopic(cleanTopic)
+          console.log(`Found ${chunks.length} chunks for topic: "${cleanTopic}"`)
           
           // Debug: show sample of first chunk
           if (chunks.length > 0) {
@@ -52,7 +55,7 @@ export async function POST(request: NextRequest) {
           },
         }));
         
-        console.log(`Generating quiz with ${quizData.length} chunks, count: ${count}, topic: ${topic}`);
+        console.log(`Generating quiz with ${quizData.length} chunks, count: ${count}, topic: ${cleanTopic}`);
         
         if (quizData.length === 0) {
           return NextResponse.json({ 
@@ -70,29 +73,44 @@ export async function POST(request: NextRequest) {
         if (!question || userAnswer === undefined) {
           return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
         }
-        
+        const cleanQuestion =
+          typeof question === "string" ? sanitizeInput(question) : ""
+        const cleanUserAnswer =
+          typeof userAnswer === "string" ? sanitizeInput(userAnswer) : ""
+        const cleanCorrectAnswer =
+          typeof correctAnswer === "string" ? sanitizeInput(correctAnswer) : ""
+
+           if (!cleanUserAnswer) {
+            return NextResponse.json(
+              { error: "Invalid or empty answer after sanitization" },
+              { status: 400 }
+            )
+          }
         // For multiple-choice and true-false, do simple comparison
         if (questionType === "multiple-choice" || questionType === "true-false") {
-          const isCorrect = userAnswer.toLowerCase().trim() === correctAnswer.toLowerCase().trim();
-          return NextResponse.json({
-            score: isCorrect ? 100 : 0,
-            isCorrect,
-            feedback: isCorrect 
-              ? "Correct! Well done." 
-              : `Incorrect. The correct answer is: ${correctAnswer}`,
-            citations: []
-          });
-        }
+        const isCorrect =
+          cleanUserAnswer.toLowerCase().trim() ===
+          cleanCorrectAnswer.toLowerCase().trim()
+
+        return NextResponse.json({
+          score: isCorrect ? 100 : 0,
+          isCorrect,
+          feedback: isCorrect
+            ? "Correct! Well done."
+            : `Incorrect. The correct answer is: ${cleanCorrectAnswer}`,
+          citations: [],
+        })
+      }
         
         // For open-ended questions, use LLM to grade
         if (questionType === "open-ended") {
           const { ollamaLLM } = await import('@/lib/llm');
           
           try {
-            const gradingResult = await ollamaLLM.gradeAnswer(
-              question,
-              userAnswer,
-              correctAnswer
+             const gradingResult = await ollamaLLM.gradeAnswer(
+              cleanQuestion,
+              cleanUserAnswer,
+              cleanCorrectAnswer
             );
             
             return NextResponse.json(gradingResult);

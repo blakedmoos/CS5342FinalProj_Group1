@@ -11,15 +11,21 @@ import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import type { TutorResponse } from "@/lib/types"
 import Link from "next/link"
+import { sanitizeInput } from "@/lib/sanitize"
 
 interface TutorData {
   topics: string[]
   sampleQuestions: string[]
 }
 
+// one simple chat array: user messages + tutor messages
+type ChatMessage =
+  | { id: string; role: "user"; text: string; timestamp: Date }
+  | { id: string; role: "tutor"; text: string; response: TutorResponse }
+
 export default function TutorPage() {
   const [question, setQuestion] = useState("")
-  const [responses, setResponses] = useState<TutorResponse[]>([])
+  const [messages, setMessages] = useState<ChatMessage[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [tutorData, setTutorData] = useState<TutorData | null>(null)
 
@@ -33,7 +39,18 @@ export default function TutorPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!question.trim()) return
+    const currentQuestion = sanitizeInput(question)
+    if (!currentQuestion) return
+
+    // 1) show the user message immediately
+    const userMsg: ChatMessage = {
+      id: crypto.randomUUID(),
+      role: "user",
+      text: currentQuestion,
+      timestamp: new Date(),
+}
+    setMessages((prev) => [...prev, userMsg])
+    setQuestion("")
 
     setIsLoading(true)
 
@@ -43,7 +60,7 @@ export default function TutorPage() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ question }),
+        body: JSON.stringify({ question: currentQuestion }),
       })
 
       if (!response.ok) {
@@ -51,19 +68,34 @@ export default function TutorPage() {
       }
 
       const tutorResponse: TutorResponse = await response.json()
-      setResponses((prev) => [tutorResponse, ...prev])
-      setQuestion("")
+
+      // 2) add tutor reply as a separate chat message
+      const tutorMsg: ChatMessage = {
+        id: crypto.randomUUID(),
+        role: "tutor",
+        text: tutorResponse.answer,
+        response: tutorResponse,
+      }
+      setMessages((prev) => [...prev, tutorMsg])
     } catch (error) {
       console.error("Error getting tutor response:", error)
-      // Add error response
+
       const errorResponse: TutorResponse = {
-        answer: "I'm sorry, I encountered an error while processing your question. Please try again.",
+        answer:
+          "I couldn't find relevant information in the knowledge base to answer your question. Please try rephrasing your question or ensure that relevant documents have been uploaded to the system.",
         citations: [],
         confidence: 0,
         timestamp: new Date(),
         processingTime: 0,
       }
-      setResponses((prev) => [errorResponse, ...prev])
+
+      const tutorMsg: ChatMessage = {
+        id: crypto.randomUUID(),
+        role: "tutor",
+        text: errorResponse.answer,
+        response: errorResponse,
+      }
+      setMessages((prev) => [...prev, tutorMsg])
     } finally {
       setIsLoading(false)
     }
@@ -72,6 +104,8 @@ export default function TutorPage() {
   const handleSampleQuestion = (sampleQuestion: string) => {
     setQuestion(sampleQuestion)
   }
+
+  const hasAnyMessages = messages.length > 0
 
   return (
     <div className="min-h-screen bg-background">
@@ -103,7 +137,7 @@ export default function TutorPage() {
         <div className="max-w-4xl mx-auto">
           {/* Title */}
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold mb-2">Q&A Tutor Agent</h1>
+            <h1 className="text-3xl font-bold mb-2">Q&amp;A Tutor Agent</h1>
             <p className="text-muted-foreground">
               Ask questions about network security and get detailed answers with citations
             </p>
@@ -138,7 +172,7 @@ export default function TutorPage() {
           </Card>
 
           {/* Sample Questions */}
-          {responses.length === 0 && tutorData && (
+          {!hasAnyMessages && tutorData && (
             <Card className="mb-8">
               <CardHeader>
                 <CardTitle className="text-lg">Sample Questions</CardTitle>
@@ -161,7 +195,7 @@ export default function TutorPage() {
           )}
 
           {/* Topics */}
-          {responses.length === 0 && tutorData && (
+          {!hasAnyMessages && tutorData && (
             <Card className="mb-8">
               <CardHeader>
                 <CardTitle className="text-lg">Available Topics</CardTitle>
@@ -178,84 +212,120 @@ export default function TutorPage() {
             </Card>
           )}
 
-          {/* Responses */}
-          <div className="space-y-6">
-            {responses.map((response, index) => (
-              <Card key={index} className="border-l-4 border-l-blue-500">
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-lg">Response</CardTitle>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="secondary">
-                        <Clock className="h-3 w-3 mr-1" />
-                        {response.processingTime}ms
-                      </Badge>
-                      <Badge
-                        variant={
-                          response.confidence > 70 ? "default" : response.confidence > 40 ? "secondary" : "outline"
-                        }
-                      >
-                        {response.confidence}% confidence
-                      </Badge>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="prose prose-sm max-w-none">
-                    <p className="whitespace-pre-wrap">{response.answer}</p>
-                  </div>
+          {/* Chat messages */}
+          <div className="flex flex-col gap-4">
+            {messages.map((msg) => {
+              if (msg.role === "user") {
+                // user bubble (right side)
+                return (
+                  <div key={msg.id} className="flex justify-end">
+  <div className="max-w-[80%] rounded-2xl bg-blue-600 text-white px-4 py-2">
+    <p className="text-[10px] uppercase tracking-wide opacity-70 mb-1">You</p>
+    <p className="text-sm whitespace-pre-wrap">{msg.text}</p>
 
-                  {/* Confidence Indicator */}
-                  {response.confidence > 0 && (
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span>Response Confidence</span>
-                        <span>{response.confidence}%</span>
+    {/* timestamp */}
+    <p className="text-[10px] opacity-70 mt-1">
+      {msg.timestamp.toLocaleString()}
+    </p>
+  </div>
+</div>
+
+                )
+              }
+
+              const r = msg.response
+              // tutor bubble (left side)
+              return (
+                <div key={msg.id} className="flex justify-start">
+                  <Card className="max-w-[80%] border-l-4 border-l-blue-500">
+                    <CardHeader>
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-lg">Tutor</CardTitle>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="secondary">
+                            <Clock className="h-3 w-3 mr-1" />
+                            {r.processingTime}ms
+                          </Badge>
+                          <Badge
+                            variant={
+                              r.confidence > 70
+                                ? "default"
+                                : r.confidence > 40
+                                ? "secondary"
+                                : "outline"
+                            }
+                          >
+                            {r.confidence}% confidence
+                          </Badge>
+                        </div>
                       </div>
-                      <Progress value={response.confidence} className="h-2" />
-                    </div>
-                  )}
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="prose prose-sm max-w-none">
+                        <p className="whitespace-pre-wrap">{r.answer}</p>
+                      </div>
 
-                  {/* Citations */}
-                  {response.citations.length > 0 && (
-                    <div>
-                      <h4 className="font-semibold mb-2 flex items-center gap-2">
-                        <FileText className="h-4 w-4" />
-                        Citations
-                      </h4>
-                      <div className="space-y-2">
-                        {response.citations.map((citation, citIndex) => (
-                          <div key={citIndex} className="flex items-center gap-2 text-sm">
-                            <Badge variant="outline" className="text-xs">
-                              {citation.type === "document" ? "DOC" : "WEB"}
-                            </Badge>
-                            <span>{citation.source}</span>
-                            {citation.page && <span className="text-muted-foreground">(Page {citation.page})</span>}
-                            {citation.url && (
-                              <a
-                                href={citation.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-blue-600 hover:text-blue-800"
-                              >
-                                <ExternalLink className="h-3 w-3" />
-                              </a>
-                            )}
-                            <Badge variant="secondary" className="text-xs ml-auto">
-                              {Math.round(citation.relevance * 100)}% relevant
-                            </Badge>
+                      {r.confidence > 0 && (
+                        <div className="space-y-2">
+                          <div className="flex justify-between text-sm">
+                            <span>Response Confidence</span>
+                            <span>{r.confidence}%</span>
                           </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                          <Progress value={r.confidence} className="h-2" />
+                        </div>
+                      )}
 
-                  <div className="text-xs text-muted-foreground">
-                    Generated at {response.timestamp.toLocaleString()}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                      {r.citations.length > 0 && (
+                        <div>
+                          <h4 className="font-semibold mb-2 flex items-center gap-2">
+                            <FileText className="h-4 w-4" />
+                            Citations
+                          </h4>
+                          <div className="space-y-2">
+                            {r.citations.map((citation, index) => (
+                              <div
+                                key={index}
+                                className="flex items-center gap-2 text-sm"
+                              >
+                                <Badge variant="outline" className="text-xs">
+                                  {citation.type === "document" ? "DOC" : "WEB"}
+                                </Badge>
+                                <span>{citation.source}</span>
+                                {citation.page && (
+                                  <span className="text-muted-foreground">
+                                    (Page {citation.page})
+                                  </span>
+                                )}
+                                {citation.url && (
+                                  <a
+                                    href={citation.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-blue-600 hover:text-blue-800"
+                                  >
+                                    <ExternalLink className="h-3 w-3" />
+                                  </a>
+                                )}
+                                <Badge
+                                  variant="secondary"
+                                  className="text-xs ml-auto"
+                                >
+                                  {Math.round(citation.relevance * 100)}% relevant
+                                </Badge>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="text-xs text-muted-foreground">
+                        Generated at {r.timestamp.toLocaleString()}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              )
+            })}
           </div>
         </div>
       </div>
