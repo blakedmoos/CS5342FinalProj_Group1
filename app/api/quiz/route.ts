@@ -9,7 +9,7 @@ export async function POST(request: NextRequest) {
 
     switch (action) {
       case "generate":
-        const { topic, count } = data
+        const { topic, count, difficulty } = data
         const cleanTopic =
         typeof topic === "string" ? sanitizeInput(topic) : topic
         
@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
           }, { status: 404 });
         }
         
-        const quiz = await generateQuiz(quizData, count || 5, topic !== 'all' ? topic : undefined);
+        const quiz = await generateQuiz(quizData, count || 5, topic !== 'all' ? topic : undefined, difficulty);
         return NextResponse.json({ questions: quiz.questions });
 
       case "grade":

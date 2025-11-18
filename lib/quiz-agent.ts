@@ -21,12 +21,12 @@ function pickRandom<T>(arr: T[], n: number): T[] {
 }
 
 // Helper to generate a multiple-choice question from a chunk using LLM
-async function generateMultipleChoice(chunk: DocumentChunk, idx: number): Promise<QuizQuestion> {
+async function generateMultipleChoice(chunk: DocumentChunk, idx: number, difficulty: "easy" | "medium" | "hard"): Promise<QuizQuestion> {
   try {
     const llmResponse = await ollamaLLM.generateQuizQuestion(
       chunk.content, 
       'multiple-choice',
-      { temperature: 0.8, maxTokens: 300 }
+      { temperature: 0.8, maxTokens: 300, difficulty }
     );
     
     // Parse the LLM response - handle extra preamble text and multiline
@@ -61,7 +61,7 @@ async function generateMultipleChoice(chunk: DocumentChunk, idx: number): Promis
       options: options.length === 4 ? options : ["Option A", "Option B", "Option C", "Option D"],
       correctAnswer,
       topic: chunk.metadata.topics?.[0] || "General",
-      difficulty: "medium",
+      difficulty,
       citations: [{
         source: chunk.metadata.filename || "Unknown",
         page: chunk.metadata.pageNumber,
@@ -83,7 +83,7 @@ async function generateMultipleChoice(chunk: DocumentChunk, idx: number): Promis
       options: options.sort(() => 0.5 - Math.random()),
       correctAnswer,
       topic: chunk.metadata.topics?.[0] || "General",
-      difficulty: "medium",
+      difficulty,
       citations: [{
         source: chunk.metadata.filename || "Unknown",
         page: chunk.metadata.pageNumber,
@@ -95,12 +95,12 @@ async function generateMultipleChoice(chunk: DocumentChunk, idx: number): Promis
 }
 
 // Helper to generate a true/false question from a chunk using LLM
-async function generateTrueFalse(chunk: DocumentChunk, idx: number): Promise<QuizQuestion> {
+async function generateTrueFalse(chunk: DocumentChunk, idx: number, difficulty: "easy" | "medium" | "hard"): Promise<QuizQuestion> {
   try {
     const llmResponse = await ollamaLLM.generateQuizQuestion(
       chunk.content, 
       'true-false',
-      { temperature: 0.8, maxTokens: 200 }
+      { temperature: 0.8, maxTokens: 200, difficulty }
     );
     
     // Parse the LLM response
@@ -120,7 +120,7 @@ async function generateTrueFalse(chunk: DocumentChunk, idx: number): Promise<Qui
       question,
       correctAnswer,
       topic: chunk.metadata.topics?.[0] || "General",
-      difficulty: "easy",
+      difficulty,
       citations: [{
         source: chunk.metadata.filename || "Unknown",
         page: chunk.metadata.pageNumber,
@@ -139,7 +139,7 @@ async function generateTrueFalse(chunk: DocumentChunk, idx: number): Promise<Qui
       question: `True or False: ${statement}`,
       correctAnswer: isTrue ? "True" : "False",
       topic: chunk.metadata.topics?.[0] || "General",
-      difficulty: "easy",
+      difficulty,
       citations: [{
         source: chunk.metadata.filename || "Unknown",
         page: chunk.metadata.pageNumber,
@@ -151,12 +151,12 @@ async function generateTrueFalse(chunk: DocumentChunk, idx: number): Promise<Qui
 }
 
 // Helper to generate an open-ended question from a chunk using LLM
-async function generateOpenEnded(chunk: DocumentChunk, idx: number): Promise<QuizQuestion> {
+async function generateOpenEnded(chunk: DocumentChunk, idx: number, difficulty: "easy" | "medium" | "hard"): Promise<QuizQuestion> {
   try {
     const llmResponse = await ollamaLLM.generateQuizQuestion(
       chunk.content, 
       'open-ended',
-      { temperature: 0.8, maxTokens: 300 }
+      { temperature: 0.8, maxTokens: 300, difficulty }
     );
     
     // Parse the LLM response
@@ -177,7 +177,7 @@ async function generateOpenEnded(chunk: DocumentChunk, idx: number): Promise<Qui
       question,
       correctAnswer,
       topic: chunk.metadata.topics?.[0] || "General",
-      difficulty: "hard",
+      difficulty,
       citations: [{
         source: chunk.metadata.filename || "Unknown",
         page: chunk.metadata.pageNumber,
@@ -195,7 +195,7 @@ async function generateOpenEnded(chunk: DocumentChunk, idx: number): Promise<Qui
       question,
       correctAnswer: "(See document)",
       topic: chunk.metadata.topics?.[0] || "General",
-      difficulty: "hard",
+      difficulty,
       citations: [{
         source: chunk.metadata.filename || "Unknown",
         page: chunk.metadata.pageNumber,
@@ -209,7 +209,8 @@ async function generateOpenEnded(chunk: DocumentChunk, idx: number): Promise<Qui
 export async function generateQuiz(
   chunks: DocumentChunk[],
   numQuestions: number = 5,
-  topic?: string
+  topic?: string,
+  difficulty?: "easy" | "medium" | "hard"
 ): Promise<Quiz> {
   console.log("=== QUIZ GENERATION START ===");
   console.log("Chunks received:", chunks.length);
@@ -234,13 +235,13 @@ export async function generateQuiz(
     // Cycle through types for variety
     if (i % 3 === 0) {
       console.log(`Generating MC question ${i + 1}/${selectedChunks.length}`);
-      questionPromises.push(generateMultipleChoice(chunk, i));
+      questionPromises.push(generateMultipleChoice(chunk, i,difficulty ?? "medium"));
     } else if (i % 3 === 1) {
       console.log(`Generating T/F question ${i + 1}/${selectedChunks.length}`);
-      questionPromises.push(generateTrueFalse(chunk, i));
+      questionPromises.push(generateTrueFalse(chunk, i,difficulty ?? "medium"));
     } else {
       console.log(`Generating open-ended question ${i + 1}/${selectedChunks.length}`);
-      questionPromises.push(generateOpenEnded(chunk, i));
+      questionPromises.push(generateOpenEnded(chunk, i,difficulty ?? "medium"));
     }
   }
   

@@ -69,6 +69,7 @@ export default function QuizPage() {
         body: JSON.stringify({
           action: "generate",
           topic: quizSettings.topic || "all",
+          difficulty: quizSettings.difficulty,
           count: quizSettings.count,
         }),
       })

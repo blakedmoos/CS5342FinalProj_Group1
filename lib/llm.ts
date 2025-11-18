@@ -7,6 +7,7 @@ export interface LLMOptions {
   model?: string;
   temperature?: number;
   maxTokens?: number;
+  difficulty?: "easy" | "medium" | "hard";
 }
 
 export interface LLMResponse {
@@ -98,12 +99,12 @@ Answer:`;
 
     switch (questionType) {
       case 'multiple-choice':
-        prompt = `Based on the following content about network security, generate a multiple-choice question with 4 options (A, B, C, D). Mark the correct answer.
+        prompt = `Based on the following content about network security, generate a multiple-choice question with 4 options (A, B, C, D). Mark the correct answer.  
 
 Content:
 ${content}
 
-IMPORTANT: Do NOT include the answer in the question text. Only provide it separately after the options.
+IMPORTANT: Do NOT include the answer in the question text. Only provide it separately after the options.  Do not ask questions about specific images, models, or organizations (like NIST or RFC) in the database, only ask conceptual questions in which the information is provided in the database but not questions about a specific document.  Ensure that only one answer choice is correct and the other three are incorrect.
 
 Generate the question in this exact format:
 Question: [Your question here - DO NOT reveal the answer]
@@ -120,7 +121,7 @@ Correct Answer: [Letter]`;
 Content:
 ${content}
 
-IMPORTANT: Do NOT include the answer in the question statement. Only provide it separately.
+IMPORTANT: Do NOT include the answer in the question statement. Only provide it separately.  Do not ask questions about specific images, models, or organizations (like NIST or RFC) in the database, only ask conceptual questions in which the information is provided in the database but not questions about a specific document.  Ensure that the question is clear in what it is asking and does not require context outside of the question.
 
 Generate the question in this exact format:
 Question: [Your statement here - DO NOT include the answer]
@@ -128,7 +129,7 @@ Correct Answer: [True or False]`;
         break;
 
       case 'open-ended':
-        prompt = `Based on the following content about network security, generate an open-ended question that requires a detailed explanation.
+        prompt = `Based on the following content about network security, generate a concise open-ended question that requires an explanation.  Make it only one question, not multiple.  Do not ask questions about specific images, models, or organizations (like NIST or RFC) in the database, only ask conceptual questions in which the information is provided in the database but not questions about a specific document.
 
 Content:
 ${content}
@@ -141,7 +142,7 @@ Expected Answer: [Key points that should be in the answer]`;
 
     const response = await this.generate(prompt, {
       ...options,
-      temperature: 0.8, // Higher temperature for more variety
+      temperature: 0.75, // Higher temperature for more variety
     });
 
     return response.text;
@@ -156,7 +157,7 @@ Expected Answer: [Key points that should be in the answer]`;
     correctAnswer: string,
     options?: LLMOptions
   ): Promise<{ score: number; feedback: string }> {
-    const prompt = `You are grading a student's answer to a network security question. Compare their answer to the correct answer and provide a score from 0 to 100 and constructive feedback.
+    const prompt = `You are grading a student's answer to a network security question. Compare their answer to the correct answer and provide a score from 0 to 100 and constructive feedback.  If the answer was incorrect, explain why the correct answer is correct.  Make sure if the user's answer is gibberish or completely irrelevant to give a score of 0.
 
 Question: ${question}
 
