@@ -11,7 +11,6 @@ export function DatabaseStatus() {
   const [isInitializing, setIsInitializing] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // 👇 NEW: track how many PDFs there are
   const [pdfCount, setPdfCount] = useState<number | null>(null)
 
   const checkStatus = async () => {
